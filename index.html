@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+  <title>Kalman Filter Example</title>
+
+  <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  
+  <link href='css/latofont.css' rel='stylesheet' type='text/css'>
+  
+  <script src="js/utils.js" type="text/javascript"></script>
+  
+  <script type="text/javascript">
+
+var x_array = [];
+var z_array = [10.2022, 9.92758, 9.64325, 10.5434, 12.2658, 10.1125, 10.1593, 10.6225, 10.4472, 10.0625, 9.85559, 11.9322, 10.5033, 9.8059, 10.3751, 10.319, 9.60403, 10.0839, 9.98859, 11.5756, 21.1098, 9.97629, 9.55936, 13.5502, 9.67162, 10.2905, 10.2705, 16.5022, 10.8873, 10.2129, 10.2716, 9.99632, 9.89441, 11.3055, 9.65083, 10.3483, 18.1041, 10.2697, 11.3616, 10.2471, 9.93616, 9.80511, 9.6627, 10.5188, 10.1196, 11.013, 9.88189, 15.5106, 23.0868, 10.2454, 9.73737, 18.6986, 10.2089, 9.67931, 11.0996, 10.5917, 9.59409, 10.7266, 9.54435, 11.1157, 9.89885, 10.9331, 10.6168, 9.922, 10.0045, 26.8186, 21.3792, 10.3558, 10.7079, 10.4694, 21.3407, 10.6816, 27.1177, 10.351, 14.0967, 10.2015, 10.2315, 10.0833, 9.70225, 9.87488, 9.95266, 10.0124, 12.5641, 10.0637, 9.96969, 11.5748, 10.2719, 10.3475, 10.2392, 11.314, 10.7904, 9.92159];
+var xaxis = [9.68463, 28.182, 60.2286, 119.682, 124.476, 125.646, 137.721, 164.913, 191.545, 213.057, 219.862, 236.995, 249.733, 278.869, 349.321, 352.178, 364.342, 367.217, 417.153, 423.469, 427.067, 428.29, 444.228, 448.889, 460.438, 488.838, 494.104, 521.644, 535.383, 537.573, 553.977, 566.31, 570.464, 571.769, 572.272, 573.899, 579.72, 585.355, 587.499, 602.388, 609.855, 616.374, 618.627, 638.491, 639.568, 651.868, 662.103, 680.678, 689.428, 699.984, 713.963, 714.586, 715.878, 735.328, 741.585, 770.032, 779.191, 781.121, 789.383, 798.602, 817.171, 825.546, 838.275, 851.636, 853.54, 869.714, 881.942, 886.077, 894.417, 897.182, 902.565, 915.255, 920.164, 968.327, 993.189, 1018.8, 1020.71, 1024.38, 1036.24, 1042.18, 1044.17, 1072.94, 1077.0, 1094.0, 1106.73, 1110.26, 1110.51, 1123.13, 1142.05, 1145.83, 1148.4, 1165.18];
+
+function init() {
+    // Clear the canvas
+    ctx = getCanvasContext();
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+
+    x = getFloatValue("xinit");
+    a = getFloatValue("a");
+    r = getFloatValue("r");
+
+    // Initialize the arrays for plotting
+    x_array = [];
+
+    for(k = 0; k < 70; k++) { 
+        setIndexedValue("x", k, x, 0);
+        //z = x + 2 * r * Math.random() - r;
+        setIndexedValue("z", k, z_array[k], 0);
+
+        // Append values to the arrays for plotting
+        x_array.push(x);
+
+        if (k == 0) {
+            setIndexedValue("xhat", k, z_array[k], 0);
+        }
+        else {
+            clearValue("xhat", k);
+        }
+
+        clearValue("p", k);
+        clearValue("g", k);
+
+        // Update x using Kalman filter equation x(t) = ax(t-1)
+        x *= a;
+    }
+
+    // Plot the arrays
+    plotMyArray(x_array, xaxis, "blue"); 
+    plotMyArray(z_array, xaxis, "red"); 
+
+    setIndexedValue("p", 0, 1, 0)
+
+}
+
+function plotMyArray(array, arrayX, color) {
+    plotArray(getCanvasContext(), array, arrayX, color, 0, 0);
+}
+
+function run() {
+
+	// Initialize parameters from values in text fields
+    a = getFloatValue("a");
+    r = getFloatValue("r");
+
+	// Initialize state estimate
+    xhat = z_array[0];
+	
+	// Initialize error covariance
+    p = 1;
+
+    // Initialize array of state estimates
+    xhat_array = [xhat];
+
+    // Compute values from Kalman filter and add them to the table
+    for (k = 0; k < 70; k++) { 
+        // Get values from array
+        z = z_array[k];
+
+        // Predict
+        xhat = a * xhat;
+        p = a * p * a;
+
+        // Update
+        g = p == 0 ? 1 : p  / (p  + r);
+        xhat = xhat + g * (z - xhat);
+        p = (1 - g) * p;
+
+        // Set new values in table
+        setIndexedValue("g",    k, g,    3); 
+        setIndexedValue("xhat", k, xhat, 0);
+        setIndexedValue("p",    k, p,    3);
+
+        // Append values to arrays for plotting
+        z_array.push(z);
+        xhat_array.push(xhat);
+    }
+    // Plot arrays
+    plotMyArray(xhat_array, xaxis, "green");
+}
+
+function setIndexedValue(tagbase, index, value, prec) {
+    document.querySelector(indexToTag(tagbase, index)).value = roundToPrecision(value, prec);
+}
+
+</script>
+
+</head>
+<body onload="init();">
+  <div class = "navbar-fixed">
+	<nav class = "top-bar"  role="navigation">
+		<div class="nav-wrapper container">
+		  <a class="brand-logo lato-font" href = "index.html"><b>SIMPLE KALMAN FILTER EXAMPLE</b></a>
+		  
+		  <ul class="right hide-on-med-and-down">
+			<li class = "grey darken-3"><a class = "lato-font navbarlink" href = "index.html">PART ONE</a></li>
+			<li><a class = "lato-font navbarlink" href = "part2.html">PART TWO</a></li>
+		  </ul>
+
+		  <ul id="nav-mobile" class="side-nav">
+			<li><div class = "slab row"><a class = "lato-font">PART ONE</a></div></li>
+			<li><div class = "slab row"><a class = "lato-font">PART TWO</a></div></li>
+		  </ul>
+		  
+		  <a href="#" data-activates="nav-mobile" class="button-collapse"><i class="mdi-navigation-menu"></i></a>
+		</div>
+	</nav>
+  </div>
+  
+  <br><br>
+
+  <div class = "container center">
+  <br>
+  <table class = "striped">
+    <tr align="right">
+      <td> <b>k</b> </td>
+      <td> </td>
+      <td> 0 </td>
+      <td> 1 </td>
+      <td> 2 </td>
+      <td> 3 </td>
+      <td> 4 </td>
+      <td> 5 </td>
+      <td> 6 </td>
+      <td> 7 </td>
+      <td> 8 </td>
+      <td> 9 </td>
+	  <td> 10 </td>
+      <td> 11 </td>
+      <td> 12 </td>
+      <td> 13 </td>
+      <td> 14 </td>
+      <td> 15 </td>
+      <td> 16 </td>
+      <td> 17 </td>
+      <td> 18 </td>
+      <td> 19 </td>
+	  <td> 20 </td>
+      <td> 21 </td>
+      <td> 22 </td>
+      <td> 23 </td>
+      <td> 24 </td>
+      <td> 25 </td>
+      <td> 26 </td>
+      <td> 27 </td>
+      <td> 28 </td>
+      <td> 29 </td>
+	  <td> 30 </td>
+      <td> 31 </td>
+      <td> 32 </td>
+      <td> 33 </td>
+      <td> 34 </td>
+      <td> 35 </td>
+      <td> 36 </td>
+      <td> 37 </td>
+      <td> 38 </td>
+      <td> 39 </td>
+	  <td> 40 </td>
+      <td> 41 </td>
+      <td> 42 </td>
+      <td> 43 </td>
+      <td> 44 </td>
+      <td> 45 </td>
+      <td> 46 </td>
+      <td> 47 </td>
+      <td> 48 </td>
+      <td> 49 </td>
+	  <td> 50 </td>
+      <td> 51 </td>
+      <td> 52 </td>
+      <td> 53 </td>
+      <td> 54 </td>
+      <td> 55 </td>
+      <td> 56 </td>
+      <td> 57 </td>
+      <td> 58 </td>
+      <td> 59 </td>
+	  <td> 60 </td>
+      <td> 61 </td>
+      <td> 62 </td>
+      <td> 63 </td>
+      <td> 64 </td>
+      <td> 65 </td>
+      <td> 66 </td>
+      <td> 67 </td>
+      <td> 68 </td>
+      <td> 69 </td>
+    </tr>
+	
+    <tr align="right">
+      <td> <font color="blue"><b>x<sub>k</sub></b></font>
+      <td> </td>
+      <td> <font color="blue"><output id=x0></output></font></td>
+      <td> <font color="blue"><output id=x1></output></font></td>
+      <td> <font color="blue"><output id=x2></output></font></td>
+      <td> <font color="blue"><output id=x3></output></font></td>
+      <td> <font color="blue"><output id=x4></output></font></td>
+      <td> <font color="blue"><output id=x5></output></font></td>
+      <td> <font color="blue"><output id=x6></output></font></td>
+      <td> <font color="blue"><output id=x7></output></font></td>
+      <td> <font color="blue"><output id=x8></output></font></td>
+      <td> <font color="blue"><output id=x9></output></font></td>
+	  <td> <font color="blue"><output id=x10></output></font></td>
+      <td> <font color="blue"><output id=x11></output></font></td>
+      <td> <font color="blue"><output id=x12></output></font></td>
+      <td> <font color="blue"><output id=x13></output></font></td>
+      <td> <font color="blue"><output id=x14></output></font></td>
+      <td> <font color="blue"><output id=x15></output></font></td>
+      <td> <font color="blue"><output id=x16></output></font></td>
+      <td> <font color="blue"><output id=x17></output></font></td>
+      <td> <font color="blue"><output id=x18></output></font></td>
+      <td> <font color="blue"><output id=x19></output></font></td>
+	  <td> <font color="blue"><output id=x20></output></font></td>
+      <td> <font color="blue"><output id=x21></output></font></td>
+      <td> <font color="blue"><output id=x22></output></font></td>
+      <td> <font color="blue"><output id=x23></output></font></td>
+      <td> <font color="blue"><output id=x24></output></font></td>
+      <td> <font color="blue"><output id=x25></output></font></td>
+      <td> <font color="blue"><output id=x26></output></font></td>
+      <td> <font color="blue"><output id=x27></output></font></td>
+      <td> <font color="blue"><output id=x28></output></font></td>
+      <td> <font color="blue"><output id=x29></output></font></td>
+	  <td> <font color="blue"><output id=x30></output></font></td>
+      <td> <font color="blue"><output id=x31></output></font></td>
+      <td> <font color="blue"><output id=x32></output></font></td>
+      <td> <font color="blue"><output id=x33></output></font></td>
+      <td> <font color="blue"><output id=x34></output></font></td>
+      <td> <font color="blue"><output id=x35></output></font></td>
+      <td> <font color="blue"><output id=x36></output></font></td>
+      <td> <font color="blue"><output id=x37></output></font></td>
+      <td> <font color="blue"><output id=x38></output></font></td>
+      <td> <font color="blue"><output id=x39></output></font></td>
+	  <td> <font color="blue"><output id=x40></output></font></td>
+      <td> <font color="blue"><output id=x41></output></font></td>
+      <td> <font color="blue"><output id=x42></output></font></td>
+      <td> <font color="blue"><output id=x43></output></font></td>
+      <td> <font color="blue"><output id=x44></output></font></td>
+      <td> <font color="blue"><output id=x45></output></font></td>
+      <td> <font color="blue"><output id=x46></output></font></td>
+      <td> <font color="blue"><output id=x47></output></font></td>
+      <td> <font color="blue"><output id=x48></output></font></td>
+      <td> <font color="blue"><output id=x49></output></font></td>
+	  <td> <font color="blue"><output id=x50></output></font></td>
+      <td> <font color="blue"><output id=x51></output></font></td>
+      <td> <font color="blue"><output id=x52></output></font></td>
+      <td> <font color="blue"><output id=x53></output></font></td>
+      <td> <font color="blue"><output id=x54></output></font></td>
+      <td> <font color="blue"><output id=x55></output></font></td>
+      <td> <font color="blue"><output id=x56></output></font></td>
+      <td> <font color="blue"><output id=x57></output></font></td>
+      <td> <font color="blue"><output id=x58></output></font></td>
+      <td> <font color="blue"><output id=x59></output></font></td>
+	  <td> <font color="blue"><output id=x60></output></font></td>
+      <td> <font color="blue"><output id=x61></output></font></td>
+      <td> <font color="blue"><output id=x62></output></font></td>
+      <td> <font color="blue"><output id=x63></output></font></td>
+      <td> <font color="blue"><output id=x64></output></font></td>
+      <td> <font color="blue"><output id=x65></output></font></td>
+      <td> <font color="blue"><output id=x66></output></font></td>
+      <td> <font color="blue"><output id=x67></output></font></td>
+      <td> <font color="blue"><output id=x68></output></font></td>
+      <td> <font color="blue"><output id=x69></output></font></td>
+    </tr>
+	
+    <tr align="right">
+      <td> <font color="red"><b>z<sub>k</sub></b></font>
+      <td> </td>
+      <td> <font color="red"><output id=z0></output></font></td>
+      <td> <font color="red"><output id=z1></output></font></td>
+      <td> <font color="red"><output id=z2></output></font></td>
+      <td> <font color="red"><output id=z3></output></font></td>
+      <td> <font color="red"><output id=z4></output></font></td>
+      <td> <font color="red"><output id=z5></output></font></td>
+      <td> <font color="red"><output id=z6></output></font></td>
+      <td> <font color="red"><output id=z7></output></font></td>
+      <td> <font color="red"><output id=z8></output></font></td>
+      <td> <font color="red"><output id=z9></output></font></td>
+	  <td> <font color="red"><output id=z10></output></font></td>
+      <td> <font color="red"><output id=z11></output></font></td>
+      <td> <font color="red"><output id=z12></output></font></td>
+      <td> <font color="red"><output id=z13></output></font></td>
+      <td> <font color="red"><output id=z14></output></font></td>
+      <td> <font color="red"><output id=z15></output></font></td>
+      <td> <font color="red"><output id=z16></output></font></td>
+      <td> <font color="red"><output id=z17></output></font></td>
+      <td> <font color="red"><output id=z18></output></font></td>
+      <td> <font color="red"><output id=z19></output></font></td>
+	  <td> <font color="red"><output id=z20></output></font></td>
+      <td> <font color="red"><output id=z21></output></font></td>
+      <td> <font color="red"><output id=z22></output></font></td>
+      <td> <font color="red"><output id=z23></output></font></td>
+      <td> <font color="red"><output id=z24></output></font></td>
+      <td> <font color="red"><output id=z25></output></font></td>
+      <td> <font color="red"><output id=z26></output></font></td>
+      <td> <font color="red"><output id=z27></output></font></td>
+      <td> <font color="red"><output id=z28></output></font></td>
+      <td> <font color="red"><output id=z29></output></font></td>
+	  <td> <font color="red"><output id=z30></output></font></td>
+      <td> <font color="red"><output id=z31></output></font></td>
+      <td> <font color="red"><output id=z32></output></font></td>
+      <td> <font color="red"><output id=z33></output></font></td>
+      <td> <font color="red"><output id=z34></output></font></td>
+      <td> <font color="red"><output id=z35></output></font></td>
+      <td> <font color="red"><output id=z36></output></font></td>
+      <td> <font color="red"><output id=z37></output></font></td>
+      <td> <font color="red"><output id=z38></output></font></td>
+      <td> <font color="red"><output id=z39></output></font></td>
+	  <td> <font color="red"><output id=z40></output></font></td>
+      <td> <font color="red"><output id=z41></output></font></td>
+      <td> <font color="red"><output id=z42></output></font></td>
+      <td> <font color="red"><output id=z43></output></font></td>
+      <td> <font color="red"><output id=z44></output></font></td>
+      <td> <font color="red"><output id=z45></output></font></td>
+      <td> <font color="red"><output id=z46></output></font></td>
+      <td> <font color="red"><output id=z47></output></font></td>
+      <td> <font color="red"><output id=z48></output></font></td>
+      <td> <font color="red"><output id=z49></output></font></td>
+	  <td> <font color="red"><output id=z50></output></font></td>
+      <td> <font color="red"><output id=z51></output></font></td>
+      <td> <font color="red"><output id=z52></output></font></td>
+      <td> <font color="red"><output id=z53></output></font></td>
+      <td> <font color="red"><output id=z54></output></font></td>
+      <td> <font color="red"><output id=z55></output></font></td>
+      <td> <font color="red"><output id=z56></output></font></td>
+      <td> <font color="red"><output id=z57></output></font></td>
+      <td> <font color="red"><output id=z58></output></font></td>
+      <td> <font color="red"><output id=z59></output></font></td>
+	  <td> <font color="red"><output id=z60></output></font></td>
+      <td> <font color="red"><output id=z61></output></font></td>
+      <td> <font color="red"><output id=z62></output></font></td>
+      <td> <font color="red"><output id=z63></output></font></td>
+      <td> <font color="red"><output id=z64></output></font></td>
+      <td> <font color="red"><output id=z65></output></font></td>
+      <td> <font color="red"><output id=z66></output></font></td>
+      <td> <font color="red"><output id=z67></output></font></td>
+      <td> <font color="red"><output id=z68></output></font></td>
+      <td> <font color="red"><output id=z69></output></font></td>
+	  
+    </tr>
+	
+    <tr align="right">
+	  <td><b>t<sub>k</sub></b></td>
+	  <td> </td>
+	  <td> <output id=p0></output></td>
+	  <td> <output id=p1></output></td>
+	  <td> <output id=p2></output></td>
+	  <td> <output id=p3></output></td>
+	  <td> <output id=p4></output></td>
+	  <td> <output id=p5></output></td>
+	  <td> <output id=p6></output></td>
+	  <td> <output id=p7></output></td>
+	  <td> <output id=p8></output></td>
+	  <td> <output id=p9></output></td>
+	  <td> <output id=p10></output></td>
+	  <td> <output id=p11></output></td>
+	  <td> <output id=p12></output></td>
+	  <td> <output id=p13></output></td>
+	  <td> <output id=p14></output></td>
+	  <td> <output id=p15></output></td>
+	  <td> <output id=p16></output></td>
+	  <td> <output id=p17></output></td>
+	  <td> <output id=p18></output></td>
+	  <td> <output id=p19></output></td>
+	  <td> <output id=p20></output></td>
+	  <td> <output id=p21></output></td>
+	  <td> <output id=p22></output></td>
+	  <td> <output id=p23></output></td>
+	  <td> <output id=p24></output></td>
+	  <td> <output id=p25></output></td>
+	  <td> <output id=p26></output></td>
+	  <td> <output id=p27></output></td>
+	  <td> <output id=p28></output></td>
+	  <td> <output id=p29></output></td>
+	  <td> <output id=p30></output></td>
+<td> <output id=p31></output></td>
+<td> <output id=p32></output></td>
+<td> <output id=p33></output></td>
+<td> <output id=p34></output></td>
+<td> <output id=p35></output></td>
+<td> <output id=p36></output></td>
+<td> <output id=p37></output></td>
+<td> <output id=p38></output></td>
+<td> <output id=p39></output></td>
+<td> <output id=p40></output></td>
+<td> <output id=p41></output></td>
+<td> <output id=p42></output></td>
+<td> <output id=p43></output></td>
+<td> <output id=p44></output></td>
+<td> <output id=p45></output></td>
+<td> <output id=p46></output></td>
+<td> <output id=p47></output></td>
+<td> <output id=p48></output></td>
+<td> <output id=p49></output></td>
+<td> <output id=p50></output></td>
+<td> <output id=p51></output></td>
+<td> <output id=p52></output></td>
+<td> <output id=p53></output></td>
+<td> <output id=p54></output></td>
+<td> <output id=p55></output></td>
+<td> <output id=p56></output></td>
+<td> <output id=p57></output></td>
+<td> <output id=p58></output></td>
+<td> <output id=p59></output></td>
+<td> <output id=p60></output></td>
+<td> <output id=p61></output></td>
+<td> <output id=p62></output></td>
+<td> <output id=p63></output></td>
+<td> <output id=p64></output></td>
+<td> <output id=p65></output></td>
+<td> <output id=p66></output></td>
+<td> <output id=p67></output></td>
+<td> <output id=p68></output></td>
+<td> <output id=p69></output></td>
+
+	</tr>
+	
+    <tr align="right">
+      <td> <font color="green"><b>x^<sub>k</sub></b></font>
+      <td> </td>
+      <td> <font color="green"><output id=xhat0></output></font></td>
+      <td> <font color="green"><output id=xhat1></output></font></td>
+      <td> <font color="green"><output id=xhat2></output></font></td>
+      <td> <font color="green"><output id=xhat3></output></font></td>
+      <td> <font color="green"><output id=xhat4></output></font></td>
+      <td> <font color="green"><output id=xhat5></output></font></td>
+      <td> <font color="green"><output id=xhat6></output></font></td>
+      <td> <font color="green"><output id=xhat7></output></font></td>
+      <td> <font color="green"><output id=xhat8></output></font></td>
+      <td> <font color="green"><output id=xhat9></output></font></td>
+	  <td> <font color="green"><output id=xhat10></output></font></td>
+      <td> <font color="green"><output id=xhat11></output></font></td>
+      <td> <font color="green"><output id=xhat12></output></font></td>
+      <td> <font color="green"><output id=xhat13></output></font></td>
+      <td> <font color="green"><output id=xhat14></output></font></td>
+      <td> <font color="green"><output id=xhat15></output></font></td>
+      <td> <font color="green"><output id=xhat16></output></font></td>
+      <td> <font color="green"><output id=xhat17></output></font></td>
+      <td> <font color="green"><output id=xhat18></output></font></td>
+      <td> <font color="green"><output id=xhat19></output></font></td>
+	  <td> <font color="green"><output id=xhat20></output></font></td>
+      <td> <font color="green"><output id=xhat21></output></font></td>
+      <td> <font color="green"><output id=xhat22></output></font></td>
+      <td> <font color="green"><output id=xhat23></output></font></td>
+      <td> <font color="green"><output id=xhat24></output></font></td>
+      <td> <font color="green"><output id=xhat25></output></font></td>
+      <td> <font color="green"><output id=xhat26></output></font></td>
+      <td> <font color="green"><output id=xhat27></output></font></td>
+      <td> <font color="green"><output id=xhat28></output></font></td>
+      <td> <font color="green"><output id=xhat29></output></font></td>
+	  <td> <font color="green"><output id=xhat30></output></font></td>
+<td> <font color="green"><output id=xhat31></output></font></td>
+<td> <font color="green"><output id=xhat32></output></font></td>
+<td> <font color="green"><output id=xhat33></output></font></td>
+<td> <font color="green"><output id=xhat34></output></font></td>
+<td> <font color="green"><output id=xhat35></output></font></td>
+<td> <font color="green"><output id=xhat36></output></font></td>
+<td> <font color="green"><output id=xhat37></output></font></td>
+<td> <font color="green"><output id=xhat38></output></font></td>
+<td> <font color="green"><output id=xhat39></output></font></td>
+<td> <font color="green"><output id=xhat40></output></font></td>
+<td> <font color="green"><output id=xhat41></output></font></td>
+<td> <font color="green"><output id=xhat42></output></font></td>
+<td> <font color="green"><output id=xhat43></output></font></td>
+<td> <font color="green"><output id=xhat44></output></font></td>
+<td> <font color="green"><output id=xhat45></output></font></td>
+<td> <font color="green"><output id=xhat46></output></font></td>
+<td> <font color="green"><output id=xhat47></output></font></td>
+<td> <font color="green"><output id=xhat48></output></font></td>
+<td> <font color="green"><output id=xhat49></output></font></td>
+<td> <font color="green"><output id=xhat50></output></font></td>
+<td> <font color="green"><output id=xhat51></output></font></td>
+<td> <font color="green"><output id=xhat52></output></font></td>
+<td> <font color="green"><output id=xhat53></output></font></td>
+<td> <font color="green"><output id=xhat54></output></font></td>
+<td> <font color="green"><output id=xhat55></output></font></td>
+<td> <font color="green"><output id=xhat56></output></font></td>
+<td> <font color="green"><output id=xhat57></output></font></td>
+<td> <font color="green"><output id=xhat58></output></font></td>
+<td> <font color="green"><output id=xhat59></output></font></td>
+<td> <font color="green"><output id=xhat60></output></font></td>
+<td> <font color="green"><output id=xhat61></output></font></td>
+<td> <font color="green"><output id=xhat62></output></font></td>
+<td> <font color="green"><output id=xhat63></output></font></td>
+<td> <font color="green"><output id=xhat64></output></font></td>
+<td> <font color="green"><output id=xhat65></output></font></td>
+<td> <font color="green"><output id=xhat66></output></font></td>
+<td> <font color="green"><output id=xhat67></output></font></td>
+<td> <font color="green"><output id=xhat68></output></font></td>
+<td> <font color="green"><output id=xhat69></output></font></td>
+
+	  
+    </tr>
+	
+	<tr align="right">
+	  <td><b>g<sub>k</sub></b></td>
+	  <td> </td>
+	  <td> <output id=g0></output></td>
+	  <td> <output id=g1></output></td>
+	  <td> <output id=g2></output></td>
+	  <td> <output id=g3></output></td>
+	  <td> <output id=g4></output></td>
+	  <td> <output id=g5></output></td>
+	  <td> <output id=g6></output></td>
+	  <td> <output id=g7></output></td>
+	  <td> <output id=g8></output></td>
+	  <td> <output id=g9></output></td>
+	  <td> <output id=g10></output></td>
+	  <td> <output id=g11></output></td>
+	  <td> <output id=g12></output></td>
+	  <td> <output id=g13></output></td>
+	  <td> <output id=g14></output></td>
+	  <td> <output id=g15></output></td>
+	  <td> <output id=g16></output></td>
+	  <td> <output id=g17></output></td>
+	  <td> <output id=g18></output></td>
+	  <td> <output id=g19></output></td>
+	  <td> <output id=g20></output></td>
+	  <td> <output id=g21></output></td>
+	  <td> <output id=g22></output></td>
+	  <td> <output id=g23></output></td>
+	  <td> <output id=g24></output></td>
+	  <td> <output id=g25></output></td>
+	  <td> <output id=g26></output></td>
+	  <td> <output id=g27></output></td>
+	  <td> <output id=g28></output></td>
+	  <td> <output id=g29></output></td>
+	  <td> <output id=g30></output></td>
+<td> <output id=g31></output></td>
+<td> <output id=g32></output></td>
+<td> <output id=g33></output></td>
+<td> <output id=g34></output></td>
+<td> <output id=g35></output></td>
+<td> <output id=g36></output></td>
+<td> <output id=g37></output></td>
+<td> <output id=g38></output></td>
+<td> <output id=g39></output></td>
+<td> <output id=g40></output></td>
+<td> <output id=g41></output></td>
+<td> <output id=g42></output></td>
+<td> <output id=g43></output></td>
+<td> <output id=g44></output></td>
+<td> <output id=g45></output></td>
+<td> <output id=g46></output></td>
+<td> <output id=g47></output></td>
+<td> <output id=g48></output></td>
+<td> <output id=g49></output></td>
+<td> <output id=g50></output></td>
+<td> <output id=g51></output></td>
+<td> <output id=g52></output></td>
+<td> <output id=g53></output></td>
+<td> <output id=g54></output></td>
+<td> <output id=g55></output></td>
+<td> <output id=g56></output></td>
+<td> <output id=g57></output></td>
+<td> <output id=g58></output></td>
+<td> <output id=g59></output></td>
+<td> <output id=g60></output></td>
+<td> <output id=g61></output></td>
+<td> <output id=g62></output></td>
+<td> <output id=g63></output></td>
+<td> <output id=g64></output></td>
+<td> <output id=g65></output></td>
+<td> <output id=g66></output></td>
+<td> <output id=g67></output></td>
+<td> <output id=g68></output></td>
+<td> <output id=g69></output></td>
+
+	</tr>
+  </table> 
+	
+  <canvas id="canvas" width="1000" height="300" align="right" style="border:1px solid #000000;"></canvas>
+  <br><br>
+  <div class = "row">
+    <div class = "col s12 m2">
+	  <b>x<sub>0</sub></b> = <input type="text" id="xinit" value="10">
+	</div>
+	<div class = "col s12 m2">
+	  <b>r =</b><input type="text" id="r" value="200">
+	</div>
+	<div class = "col s12 m2">
+	  <b>a =</b><input type="text" id="a" value="1">
+	</div>
+	<div class = "col s12 m1">&nbsp;
+	</div>
+	<div class = "col s12 m3 center">
+	  <br>
+	  <a class="waves-effect waves-light btn" onclick="init()">Initialize</a>
+    </div>
+	<div class = "col s12 m2 center">
+	  <br>
+	  <a class="waves-effect waves-light btn" onclick="run()">Run</a>
+    </div>
+  </div>
+  
+  </div>
+	
+  <script src="js/jquery-2.1.1.min.js"></script>
+  <script src="js/materialize.js"></script>
+  <script src="js/init.js"></script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0"/>
+  <title>Kalman Filter Example</title>
+
+  <link href="css/materialize.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  
+  <link href='css/latofont.css' rel='stylesheet' type='text/css'>
+  
+  <script src="js/utils.js" type="text/javascript"></script>
+  
+  <script type="text/javascript">
+
+
+function initValue(tag, value) {
+    slider = document.getElementById(tag.concat('slider')); 
+    slider.value = value;
+    document.querySelector('#'.concat(tag)).value = value;
+}
+
+function random(variance) {
+    return 2 * variance * Math.random() - variance;
+}
+
+function init() {
+	// Initializing a, b, c and r with some default starting values
+    initValue('a', 0.95); 
+    initValue('b', 0.5); 
+    initValue('c', 1.0); 
+    initValue('r', 100); 
+    run();
+}
+
+function plotMyArray(array, color) {
+    plotArray(getCanvasContext(), array, color, 0, 1200);
+}
+
+function run() {
+    // Arbitrary constants
+    x = 1000;
+    n = 100;
+
+    // Constants from slider values
+    a = getFloatValue("a");
+    b = getFloatValue("b");
+    c = getFloatValue("c");
+    r = getFloatValue("r");
+ 
+    // Initialize the arrays for plot
+    x_array = [];
+    z_array = [];
+
+    // Clear the previous plot
+    ctx = getCanvasContext();
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+
+    // Draw axes
+    var w = ctx.canvas.width;
+    var h = ctx.canvas.height;
+    ctx.beginPath();
+    ctx.strokeStyle = "gray";
+    ctx.moveTo(0,h); ctx.lineTo(w,h);   // X axis
+    ctx.moveTo(0,0); ctx.lineTo(0,h);   // Y axis
+    ctx.stroke();
+
+    // Compute state, observation signals
+    for (k = 0; k < n; k++) { 
+        // Arbitrary upward control signal
+        u = k;
+
+        // Noise
+        v = random(r);
+
+        // Update state
+        x = a*x + b*u;
+
+        // Update observation
+        z = c*x + v;
+
+        // Append values to arrays for plotting
+        x_array.push(x);
+        z_array.push(z);
+    }
+
+    // Plot state, observation
+    plotMyArray(x_array, "blue");
+    plotMyArray(z_array, "red");
+
+   // Initialize state estimate and error covariance
+    xhat = z_array[0];
+    p = 1;
+
+    // Initialize array of state estimates
+    xhat_array = [xhat];
+
+    // Compute estimated state signal
+    for (k = 1; k < n; k++) {
+        // Arbitrary upward control signal
+        u = k;
+
+        // Get values from array
+        z    = z_array[k];
+
+        // Predict
+        xhat = a*xhat + b*u;
+        p    = a*p*a;
+
+        // Update
+        g    = p == 0 ? 1 : p*c  / (c*p*c  + r);
+        xhat = xhat + g * (z - c*xhat);
+        p    = (1 - g*c) * p;
+
+        // Append value to array for plotting
+        xhat_array.push(xhat);
+    }
+
+    // Plot estimated state signal
+    plotMyArray(xhat_array, "green");
+ }
+
+function update(tag, value) {
+  document.querySelector('#'.concat(tag)).value = value;
+  run();
+}
+
+</script>
+
+</head>
+<body onload= "init();">
+  <div class = "navbar-fixed">
+	<nav class = "top-bar"  role="navigation">
+		<div class="nav-wrapper container">
+		  <a class="brand-logo lato-font" href = "index.html"><b>SIMPLE KALMAN FILTER EXAMPLE</b></a>
+		  
+		  <ul class="right hide-on-med-and-down">
+			<li><a class = "lato-font navbarlink" href = "index.html">PART ONE</a></li>
+			<li class = "grey darken-3"><a class = "lato-font navbarlink" href = "part2.html">PART TWO</a></li>
+		  </ul>
+
+		  <ul id="nav-mobile" class="side-nav">
+			<li><div class = "slab row"><a class = "lato-font">PART ONE</a></div></li>
+			<li><div class = "slab row"><a class = "lato-font">PART TWO</a></div></li>
+		  </ul>
+		  
+		  <a href="#" data-activates="nav-mobile" class="button-collapse"><i class="mdi-navigation-menu"></i></a>
+		</div>
+	</nav>
+  </div>
+  
+  <br><br>
+  
+  <div class = "container center">
+    <br>
+	<canvas id="canvas" width="500" height="200" align="right" style="border:1px solid #000000;"></canvas>
+    <table>
+      <tr>
+		<td> 
+		  <input type=range min=0 max=1 id=aslider step=.01 onchange="update('a', value)">
+		  <b>a =
+		  <output for=aslider id=a>0.95</output></b>
+		</td> 
+
+		<td>
+		</td>
+
+		<td>
+		  <input type=range min=0 max=200 id=rslider step=1 onchange="update('r', value)">
+		  <b>r = 
+		  <output for=bslider id=r>100</output></b>
+		</td>
+	  </tr>
+
+	  <tr>
+		<td>
+		  <input type=range min=0 max=1 id=bslider step=.01 onchange="update('b', value)">
+		  <b>b =
+		  <output for=bslider id=b>0.5</output></b>
+		</td>
+		
+		<td>
+		</td>
+		
+		<td>
+		  <input type=range min=0.5 max=1.5 id=cslider step=.01 onchange="update('c', value)">
+		  <b>c =
+		  <output for=cslider id=c>1.0</output></b>
+		</td>
+	  </tr>
+	</table>
+	
+	<br>
+	<div class = "row">
+	  <a class="waves-effect waves-light btn" onclick="init()">Reset</a>
+	</div>
+  </div>
+  
+  <script src="js/jquery-2.1.1.min.js"></script>
+  <script src="js/materialize.js"></script>
+  <script src="js/init.js"></script>
+
+  </body>
+</html>
